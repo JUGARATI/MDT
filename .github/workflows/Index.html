@@ -1,1 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Corporate Treasury Analytics</title>
 
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f0f0f0;
+  margin: 20px;
+}
+
+h2 {
+  color: #002244;
+}
+
+#current-date {
+  font-weight: bold;
+  margin-bottom: 10px;
+  display: block;
+  color: #002244;
+}
+
+.category-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.category-card {
+  background: #ffffff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px 15px;
+  cursor: pointer;
+  font-weight: bold;
+  color: #002244;
+}
+
+.category-card.active {
+  background: #002244;
+  color: white;
+}
+
+.dashboard-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.dashboard-card {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 15px;
+  width: 300px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  position: relative;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-3px);
+}
+
+.dashboard-title {
+  font-weight: bold;
+  font-size: 1.05em;
+  color: #002244;
+}
+
+/* Tooltip arriba del cuadro */
+.tooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  background: #ffffff;
+  border: 1px solid #aaa;
+  padding: 10px;
+  font-size: 11px;
+  color: #002244;
+  width: 300px;
+  border-radius: 4px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+  z-index: 999;
+  text-align: justify;
+}
+
+.dashboard-card:hover .tooltip {
+  display: block;
+}
+</style>
+</head>
+
+<body>
+
+<!-- Fecha actualizada automáticamente -->
+<span id="current-date"></span>
+
+<h2>Corporate Treasury Analytics</h2>
+
+<div class="category-container" id="categories"></div>
+<div class="dashboard-container" id="dashboards"></div>
+
+<script>
+const categories = [
+  "Cash & Balances",
+  "Interest / CMA / Finco",
+  "Bank Accounts / Banking",
+  "IC / Intercompany",
+  "FX / Exposure",
+  "Liquidity / Forecasts"
+];
+
+const dashboards = [
+  {name:"COUNTERPARTY RISK",category:"Cash & Balances",description:"Monthly cash balances, investments, MMFs, and derivatives, grouped by banking group and classified by risk based on Moody’s, S&P, and Fitch ratings.",source:"Reval: Liquidity Plan Items / Cross Currency Rates / Enhanced Activity Views / Counterparty Exposure Report",update:"Monthly, First fiscal Thursday. Estimated update: 9:00 a.m. EST",link:"https://app.powerbi.com/groups/99fe470a-f6c9-4471-85ed-14fcc6c27767/reports/7b8a51c6-fe47-41dc-9bee-61e822276433/ReportSection?experience=power-bi"},
+  {name:"CASH & INTEREST REPORTS",category:"Cash & Balances",description:"Monthly and quarterly cash, investments, interest income/expense balances. Data consolidated based on pre-defined groupings by region, country, legal entity and bank account.",source:"OneStream, Reval, SharePoint, External Mapping, Manual Inputs",update:"Monthly, Post OneStream Consolidation close, usually Thursdays EOD",link:"https://app.powerbi.com/groups/99fe470a-f6c9-4471-85ed-14fcc6c27767/reports/ab8d3cd8-3ca6-43ad-80ae-9172ee766c84/5d9c7008ed0af8e1d535?experience=power-bi"},
+  {name:"DAILY CASH BALANCE",category:"Cash & Balances",description:"The data is only available for EMEA.",source:"Reval, SharePoint, External Mapping",update:"Daily, Estimated update time: 9:00 a.m. EST",link:"https://app.powerbi.com/groups/me/reports/1b0d5cd7-8575-433c-84dc-8c03a8040ddc/ReportSectionc4e870c0c26541953054"},
+  {name:"TARGET BALANCE OVERVIEW",category:"Cash & Balances",description:"Comparison of actual cash balances vs target balances. Includes commentaries about deviations.",source:"Reval, SharePoint, External Mapping, Manual Inputs",update:"Daily, Estimated update time: 9:00 a.m. EST",link:"https://app.powerbi.com/groups/d68a42c1-f669-4cce-80cb-ba1afbd83b7b/reports/ce026df8-23d6-4918-b14a-d4430cccd3eb/ReportSectionb85ebb0bb62f47800a34?experience=power-bi"},
+  {name:"MCNP BALANCE & INTEREST PROJECTION",category:"Cash & Balances",description:"Track and forecast MCNP balances and interest actuals and forecasts in LCY and USD. This report provides visibility into pool benefits, FX impacts, and interest scenarios to support treasury planning and performance analysis.",source:"SharePoint: MCNP Details BOFA Participant-Pool / Foreign Exchange Report / AOP Rates Report / External Mapping: Fiscal Calendar",update:"Daily, Estimated update time: 2:00 a.m. EST",link:"https://app.powerbi.com/groups/99fe470a-f6c9-4471-85ed-14fcc6c27767/reports/d378962a-9bb9-4f38-8212-bd6bd25338ae/16a163b894373a34d4d0?experience=power-bi"},
+  {name:"AR/AP DAILY AVERGAGE",category:"Cash & Balances",description:"Daily average of AR/AP cashflows based on previous week activity. The dashboard shows the values at the end of the previous fiscal week.",source:"Reval, SharePoint, External Mapping",update:"Weekly, Every Tuesday 9 a.m. EST",link:"https://app.powerbi.com/groups/d68a42c1-f669-4cce-80cb-ba1afbd83b7b/reports/e86ce726-5e0c-4e0a-a769-bba2e86e2510/ReportSection559235f1a368d86cf980?experience=power-bi"},
+  {name:"CMA INTEREST DETAILS REPORT",category:"Interest / CMA / Finco",description:"CMA interest calculation details. The data is only available for EMEA. Audit reports and interest forecast analysis.",source:"Reval: Accrual Report / Accrued Interest Due Report / Notional Balance Report / Report Account Balance / Cash Transactions / Entity Accounts / Cross Currency Rates",update:"Monthly, Dependency: FinCo File is stored",link:"https://app.powerbi.com/groups/d68a42c1-f669-4cce-80cb-ba1afbd83b7b/reports/33083d55-e7e0-49e5-a044-c3109a29ec22/8de830232058d9ca1734?experience=power-bi"},
+  {name:"FINCO FILE",category:"Interest / CMA / Finco",description:"Month end Intercompany Loan and CMA balances including interest projections through fiscal year end.",source:"Reval, SharePoint, External Mapping, Manual Inputs",update:"Monthly, First Monday EOD",link:"https://app.powerbi.com/groups/99fe470a-f6c9-4471-85ed-14fcc6c27767/reports/88d4e09a-dfc0-41fd-8298-9ca949040dc5/ReportSection36f2bfa2e4dad8d1da12?experience=power-bi"},
+  {name:"ACCOUNTING VS. ECONOMIC EXPOSURE",category:"FX / Exposure",description:"Comparison of accounting vs economic exposure by currency and fiscal period.",source:"Atlas FX, SAP, Month End FX Rates File",update:"Manually updated by the FX team",link:"https://app.powerbi.com/groups/me/reports/25d2481c-81f0-47eb-b975-8777566e591e/ReportSection5cf5c9f65c16c86076b7?experience=power-bi"},
+  {name:"DAILY FX RATES",category:"FX / Exposure",description:"Daily FX rates against USD per currency, including historical data.",source:"Reval, SharePoint, External Mapping",update:"Daily, Estimated update time: 9:00 a.m. EST",link:"https://app.powerbi.com/groups/d68a42c1-f669-4cce-80cb-ba1afbd83b7b/reports/2fb14e6b-2fe0-427c-9ade-9204a314b6ce/ReportSection?experience=power-bi"},
+  {name:"BANK ACCOUNT OVERVIEW",category:"Bank Accounts / Banking",description:"Overview of bank account signers by legal entity and country.",source:"IBAM, External Mapping, Workday",update:"Daily, Estimated update time: 6:00 a.m. EST",link:"https://app.powerbi.com/groups/d68a42c1-f669-4cce-80cb-ba1afbd83b7b/reports/e5ca14a1-fe4f-44a3-b509-4cbe21971a0d/ReportSection9c028263db084004ca54?experience=power-bi"},
+  {name:"BANK CHARGES ANALYSIS",category:"Bank Accounts / Banking",description:"Detail of items booked in G/L accounts related to bank charges.",source:"IBAM SQL, Manual Input, External Mapping",update:"Daily, PBI scheduled refresh at 6:00 a.m. EST",link:"https://app.powerbi.com/groups/d68a42c1-f669-4cce-80cb-ba1afbd83b7b/reports/9151c373-b8cd-4a48-bbb5-ec1d9195e713/ReportSectiond4d7fc224239aca92369?experience=power-bi"},
+  {name:"BANKING RELATIONSHIP DASHBOARD",category:"Bank Accounts / Banking",description:"Scorecard for rating relationship with our partner banks. Scope: EMEA.",source:"IBAM: Financial Institutions Report",update:"Daily, Estimated update time: 6:00 a.m. EST",link:"https://app.powerbi.com/groups/d68a42c1-f669-4cce-80cb-ba1afbd83b7b/reports/15d47fa7-2903-4942-870f-177807755435/4ee9508a297ad01995d3?experience=power-bi"},
+  {name:"E-BANKING USERS OVERVIEW",category:"Bank Accounts / Banking",description:"Overview of online banking portal users.",source:"Automated extraction from online banking platforms and Workday",update:"Daily, Estimated update time: 6 a.m. EST",link:"https://app.powerbi.com/groups/me/reports/464eca5b-d39e-4af8-bfbf-ea0dfc762f37/ReportSectionea80d22e800e4db60934?experience=power-bi"},
+  {name:"GUARANTEES REPORT",category:"Bank Accounts / Banking",description:"Overview of contingent liabilities, credit usage and available limits.",source:"SharePoint / Workday / External mappings",update:"Daily, Estimated update time: 11 a.m. EST",link:"https://app.powerbi.com/groups/d68a42c1-f669-4cce-80cb-ba1afbd83b7b/reports/48f92b40-e678-4efd-bc10-44fbb39b0331/ReportSection8fb3b5a6c94523806618?experience=power-bi"},
+  {name:"IC AGING",category:"IC / Intercompany",description:"Extracts intercompany billing data for current and historical periods.",source:"Snowflake SAP IC Transaction tables, Reval, SharePoint",update:"Daily, Estimated update time: 7:00 a.m. EST",link:"https://app.powerbi.com/groups/99fe470a-f6c9-4471-85ed-14fcc6c27767/reports/30fcf381-e33c-46e8-bc7a-6cccb70bf6d1/7d14265b148e3b980927?experience=power-bi"},
+  {name:"IC PURCHASES PROJECTION",category:"IC / Intercompany",description:"Uses IC Aging data to generate projections.",source:"Snowflake SAP IC Transaction tables, Reval, SharePoint",update:"Monthly, First fiscal Tuesday",link:"https://app.powerbi.com/groups/99fe470a-f6c9-4471-85ed-14fcc6c27767/reports/f5203b6d-a281-49bf-97bd-33dfb7b75826/9aa7ec20f848e8cd81bb?experience=power-bi"},
+  {name:"IC TREND",category:"IC / Intercompany",description:"Historical monthly trend of IC balances and payments.",source:"OneStream, Snowflake, SharePoint",update:"Monthly, Post OneStream close",link:"https://app.powerbi.com/groups/d68a42c1-f669-4cce-80cb-ba1afbd83b7b/reports/1afaefd1-63a1-4124-b996-4d7ccf965e8b/ReportSection?experience=power-bi"},
+  {name:"PAYMENT TOOL: IC BRAZIL",category:"IC / Intercompany",description:"Reconciliation of IC invoices in Brazil.",source:"External Mapping, SAP IC Manual Extraction",update:"On Demand",link:"https://app.powerbi.com/links/VB3W1GHnmL"},
+  {name:"PAYMENT TOOL: IC COLOMBIA",category:"IC / Intercompany",description:"Reconciliation of IC invoices in Colombia.",source:"External Mapping, SAP IC Manual Extraction",update:"On Demand",link:"https://app.powerbi.com/groups/c77e741b-8030-4dea-bc3f-69195ca98924/reports/38f0aa83-7d79-4ba3-93e6-5d1b80f64c2a/ReportSection"},
+  {name:"LACA FCST",category:"Liquidity / Forecasts",description:"Short term cash flow forecast based on Reval tagging.",source:"Reval, SharePoint",update:"Weekly, Every Monday",link:"https://app.powerbi.com/groups/d68a42c1-f669-4cce-80cb-ba1afbd83b7b/reports/72ebe57b-7445-4ff0-8631-4c9630df79c3/ReportSection?experience=power-bi"},
+  {name:"LIQUIDITY DASHBOARD",category:"Liquidity / Forecasts",description:"Tracking YTD free cash flow vs AOP targets.",source:"Liquidity Masterfile",update:"Weekly, Every Monday EOD",link:"https://app.powerbi.com/groups/d68a42c1-f669-4cce-80cb-ba1afbd83b7b/reports/1b3b90ea-1d88-43a7-9e88-6a32df6d1785/ReportSection?experience=power-bi"},
+  {name:"CASH FORECAST",category:"Liquidity / Forecasts",description:"Weekly cash forecast by country, bank, currency and entity.",source:"Reval, SharePoint, External Mapping",update:"Weekly, Every Thursday 9 a.m. EST",link:"https://app.powerbi.com/groups/d68a42c1-f669-4cce-80cb-ba1afbd83b7b/reports/abc123/ReportSection?experience=power-bi"}
+];
+
+// Render categorías
+const categoriesDiv = document.getElementById("categories");
+const dashboardsDiv = document.getElementById("dashboards");
+
+categories.forEach(cat => {
+  const btn = document.createElement("div");
+  btn.className = "category-card";
+  btn.textContent = cat;
+  btn.onclick = () => {
+    document.querySelectorAll(".category-card").forEach(c => c.classList.remove("active"));
+    btn.classList.add("active");
+    render(cat);
+  };
+  categoriesDiv.appendChild(btn);
+});
+
+function render(category) {
+  dashboardsDiv.innerHTML = "";
+  dashboards.filter(d => d.category === category).forEach(d => {
+    const card = document.createElement("div");
+    card.className = "dashboard-card";
+    card.onclick = () => window.open(d.link, "_blank");
+    card.innerHTML = `
+      <div class="dashboard-title">${d.name}</div>
+      <div class="tooltip">
+        <strong>Description:</strong> ${d.description}<br><br>
+        <strong>Source:</strong> ${d.source}<br><br>
+        <strong>Update:</strong> ${d.update}
+      </div>`;
+    dashboardsDiv.appendChild(card);
+  });
+}
+
+// Click en la primera categoría por defecto
+document.querySelector(".category-card").click();
+
+// --- Mostrar fecha actual ---
+function formatDate(date) {
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  return date.toLocaleDateString('en-US', options);
+}
+document.getElementById("current-date").textContent = formatDate(new Date());
+
+</script>
+
+</body>
+</html>
